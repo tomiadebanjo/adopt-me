@@ -1,7 +1,11 @@
 import React from "react";
 import { render } from "react-dom";
+import { Router, Link } from "@reach/router";
 import pf from "petfinder-client";
-import Pet from "./Pet";
+import { Provider } from "./SearchContext";
+import Results from "./Results";
+import Details from "./Details";
+import SearchParams from "./SearchParams";
 
 const petfinder = pf({});
 
@@ -10,38 +14,74 @@ class App extends React.Component {
     super(props);
 
     this.state = {
-      pets: []
+      location: "Seattle, WA",
+      animal: "",
+      breed: "",
+      breeds: [],
+      handleAnimalChange: this.handleAnimalChange,
+      handleBreedChange: this.handleBreedChange,
+      handleLocationChange: this.handleLocationChange,
+      getBreeds: this.getBreeds
     };
   }
 
-  componentDidMount() {
-    petfinder.pet
-      .find({ output: "full", location: "Seattle, WA" })
-      .then(data => {
-        let pets;
+  handleLocationChange = event => {
+    this.setState({
+      location: event.target.value
+    });
+  };
 
-        if (data.petfinder.pets && data.petfinder.pets.pet) {
-          if (Array.isArray(data.petfinder.pets.pet)) {
-            pets = data.petfinder.pets.pet;
-          } else {
-            pets = [data.petfinder.pets.pet];
-          }
-        } else {
-          pets = [];
+  handleAnimalChange = event => {
+    this.setState(
+      {
+        animal: event.target.value,
+        breed: ""
+      },
+      this.getBreeds
+    );
+  };
+
+  handleBreedChange = event => {
+    this.setState({
+      breed: event.target.value
+    });
+  };
+
+  getBreeds() {
+    if (this.state.animal) {
+      petfinder.breed.list({ animal: this.state.animal }).then(data => {
+        console.log(data);
+        if (
+          data.petfinder &&
+          data.petfinder.breeds &&
+          Array.isArray(data.petfinder.breeds.breed)
+        ) {
+          this.setState({ breeds: data.petfinder.breeds.breed });
         }
-
-        this.setState({
-          pets
-        });
       });
+    } else {
+      this.setState({ breeds: [] });
+    }
   }
+
   render() {
     return (
       <div>
-        <h1>Adopt Me!</h1>
-        <Pet name="Luna" animal="Dog" breed="Havana" />
-        <Pet name="Pepper" animal="bird" breed="Cocktail" />
-        <Pet name="Dok" animal="Cat" breed="Havana" />
+        <header>
+          <Link to="/">Adopt Me!</Link>
+          <Link to="/search-params">
+            <span aria-label="search" role="img">
+              🔍
+            </span>
+          </Link>
+        </header>
+        <Provider value={this.state}>
+          <Router>
+            <Results path="/" />
+            <Details path="/details/:id" />
+            <SearchParams path="/search-params" />
+          </Router>
+        </Provider>
       </div>
     );
   }
